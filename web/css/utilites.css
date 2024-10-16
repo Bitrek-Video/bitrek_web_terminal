@@ -1,0 +1,63 @@
+* {
+	box-sizing: border-box;
+}
+
+:root {
+	--xt-font-family: "Inconsolata", monospace;
+}
+
+.xt-stdout {
+	line-height: 1.25;
+}
+
+#terminal {
+	height: calc(100vh - 320px);
+	overflow-x: hidden;
+	overflow-y: auto;
+	border-radius: 7px;
+	margin-top: 15px;
+	margin-bottom: 15px;
+}
+
+.text-link {
+	cursor: pointer;
+	text-decoration: underline;
+	color: rgba(var(--bs-link-color-rgb), var(--bs-link-opacity, 1));
+}
+
+.text-link:hover {
+	color: rgba(var(--bs-link-hover-color-rgb));
+}
+
+@keyframes blink {
+	0% {
+		opacity: 0;
+	}
+	50% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+	}
+}
+
+.xt-cursor {
+	animation: blink 2s ease-in-out infinite;
+}
+
+.full-transparent {
+	opacity: 0 !important;
+	cursor: unset !important;
+}
+
+.copy-button {
+	cursor: pointer;
+	opacity: 0.5;
+	margin-right: 5px;
+	user-select: none;
+	transition: all 0.2s ease-in-out;
+}
+
+.copy-button:hover {
+	opacity: 1;
+}

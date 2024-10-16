@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Bitrek Serial Web Terminal</title>
+
+		<link rel="shortcut icon" type="image/ico" href="favicon.ico" />
+		<!-- Inconsolata font -->
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Inconsolata&display=swap"
+			rel="stylesheet"
+		/>
+
+		<link
+			href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+			rel="stylesheet"
+		/>
+
+		<link
+			rel="stylesheet"
+			href="https://unpkg.com/xterminal/dist/xterminal.css"
+		/>
+		<link rel="stylesheet" href="css/utilites.css" />
+	</head>
+	<body class="p-xl-4 p-1">
+		<div class="container">
+			<h1 class="mb-4 mt-4">Bitrek Serial Web Terminal</h1>
+			<div class="row g-3 mb-3">
+				<!-- Baud Rate -->
+				<div class="col-lg-2">
+					<div class="form-floating">
+						<select
+							class="form-select border border-1 border-primary"
+							id="baudRate"
+							aria-label="Baud Rate"
+						>
+							<option value="300">300</option>
+							<option value="1200">1200</option>
+							<option value="2400">2400</option>
+							<option value="4800">4800</option>
+							<option value="9600">9600</option>
+							<option value="19200">19200</option>
+							<option value="38400">38400</option>
+							<option value="57600">57600</option>
+							<option value="115200" selected>115200</option>
+							<option value="230400">230400</option>
+							<option value="460800">460800</option>
+							<option value="921600">921600</option>
+						</select>
+						<label for="baudRate">Baud Rate</label>
+					</div>
+				</div>
+
+				<!-- Data Bits -->
+				<div class="col-lg-2 col-md-4">
+					<div class="form-floating">
+						<select class="form-select" id="dataBits" aria-label="Data Bits">
+							<option value="7">7</option>
+							<option value="8" selected>8</option>
+						</select>
+						<label for="dataBits">Data Bits</label>
+					</div>
+				</div>
+
+				<!-- Stop Bits -->
+				<div class="col-lg-2 col-md-4">
+					<div class="form-floating">
+						<select class="form-select" id="stopBits" aria-label="Stop Bits">
+							<option value="1" selected>1</option>
+							<option value="2">2</option>
+						</select>
+						<label for="stopBits">Stop Bits</label>
+					</div>
+				</div>
+
+				<!-- Parity -->
+				<div class="col-lg-2 col-md-4">
+					<div class="form-floating">
+						<select class="form-select" id="parity" aria-label="Parity">
+							<option value="none" selected>None</option>
+							<option value="even">Even</option>
+							<option value="odd">Odd</option>
+						</select>
+						<label for="parity">Parity</label>
+					</div>
+				</div>
+
+				<!-- Buffer Size -->
+				<div class="col-lg-2 col-md-6">
+					<div class="form-floating">
+						<select
+							class="form-select"
+							id="bufferSize"
+							aria-label="Buffer Size"
+						>
+							<option value="512">512 Bytes</option>
+							<option value="1024" selected>1 KB (default)</option>
+							<option value="2048">2 KB</option>
+							<option value="4096">4 KB</option>
+							<option value="8192">8 KB</option>
+							<option value="16384">16 KB</option>
+							<option value="32768">32 KB</option>
+							<option value="65536">64 KB</option>
+						</select>
+						<label for="bufferSize">Buffer Size</label>
+					</div>
+				</div>
+
+				<!-- Flow Control -->
+				<div class="col-lg-2 col-md-6">
+					<div class="form-floating">
+						<select
+							class="form-select"
+							id="flowControl"
+							aria-label="Flow Control"
+						>
+							<option value="none" selected>None</option>
+							<option value="hardware">Hardware</option>
+						</select>
+						<label for="flowControl">Flow Control</label>
+					</div>
+				</div>
+			</div>
+
+			<!-- Connect / Disconnect Buttons -->
+			<button
+				class="btn btn-primary me-2"
+				id="connectBtn"
+				onclick="connectSerialBtn()"
+			>
+				Connect
+			</button>
+			<button
+				class="btn btn-danger d-none"
+				id="disconnectBtn"
+				onclick="disconnectSerialBtn()"
+			>
+				Disconnect
+			</button>
+
+			<div id="terminal" class="border"></div>
+		</div>
+
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+		<script src="https://unpkg.com/xterminal/dist/xterminal.umd.js"></script>
+		<script src="js/bitrek_terminal.js"></script>
+		<script src="js/bitrek_uart.js"></script>
+		<script src="js/utilites.js"></script>
+
+		<script src="js/main.js"></script>
+	</body>
+</html>
