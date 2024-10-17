@@ -37,6 +37,17 @@ function disconnectSerialBtn() {
   bitrekTerm.simulateWrite("//disconnect");
 }
 
+function exportTerm(type) {
+  switch (type) {
+    case "html":
+      bitrekTerm.simulateWrite("//export html");
+      break;
+    case "plain":
+      bitrekTerm.simulateWrite("//export plain");
+      break;
+  }
+}
+
 /**
  * Enables or disables the buttons on the page depending on whether the serial port is connected.
  *

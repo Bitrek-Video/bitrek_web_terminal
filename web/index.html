@@ -123,30 +123,54 @@
 						<label for="flowControl">Flow Control</label>
 					</div>
 				</div>
-			</div>
+				<div class="col-12">
+					<!-- Connect / Disconnect Buttons -->
+					<button
+						class="btn btn-primary me-2"
+						id="connectBtn"
+						onclick="connectSerialBtn()"
+					>
+						Connect
+					</button>
+					<button
+						class="btn btn-danger d-none me-2"
+						id="disconnectBtn"
+						onclick="disconnectSerialBtn()"
+					>
+						Disconnect
+					</button>
 
-			<!-- Connect / Disconnect Buttons -->
-			<button
-				class="btn btn-primary me-2"
-				id="connectBtn"
-				onclick="connectSerialBtn()"
-			>
-				Connect
-			</button>
-			<button
-				class="btn btn-danger d-none"
-				id="disconnectBtn"
-				onclick="disconnectSerialBtn()"
-			>
-				Disconnect
-			</button>
+					<span class="dropend">
+						<button
+							class="btn btn-secondary dropdown-toggle"
+							type="button"
+							data-bs-toggle="dropdown"
+							aria-expanded="false"
+						>
+							Export
+						</button>
+						<ul class="dropdown-menu">
+							<li>
+								<a class="dropdown-item" href="#" onclick="exportTerm('html')">
+									HTML
+								</a>
+							</li>
+							<li>
+								<a class="dropdown-item" href="#" onclick="exportTerm('plain')">
+									Plain Text
+								</a>
+							</li>
+						</ul>
+					</span>
+				</div>
+			</div>
 
 			<div id="terminal" class="border"></div>
 		</div>
 
 		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-		<script src="https://unpkg.com/xterminal/dist/xterminal.umd.js"></script>
+		<script src="js/xterminal.umd.js"></script>
 		<script src="js/bitrek_terminal.js"></script>
 		<script src="js/bitrek_uart.js"></script>
 		<script src="js/utilites.js"></script>

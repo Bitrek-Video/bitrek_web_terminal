@@ -75,8 +75,8 @@ class WebSerial {
 
       this._readLoop();
     } catch (error) {
-      console.error("Failed to connect to serial port:", error);
-      this.onError("Failed to connect to serial port:", error);
+      console.error("Failed to connect to serial port:" + error);
+      this.onError("Failed to connect to serial port:" + error);
     }
   }
 
@@ -96,7 +96,9 @@ class WebSerial {
     try {
       while (this.reader) {
         const { value, done } = await this.reader.read();
-        if (done) break;
+        if (done) {
+          break;
+        }
         this.buffer += value;
         if (this.buffer.length > this.lineBufferSize) {
           console.warn("Buffer limit exceeded. Trimming data.");
@@ -111,7 +113,12 @@ class WebSerial {
         });
       }
     } catch (error) {
-      this.onError("Error reading from serial port:", error);
+      this.onError(
+        "Error reading from serial port: " +
+          (error || error.messages) +
+          " Try " +
+          "<span class='term-command text-link' data-command='//reconnect'>//reconnect</span>"
+      );
       if (this.buffer.trim()) {
         this.onDataReceived(this.buffer);
         this.buffer = "";
@@ -170,7 +177,7 @@ class WebSerial {
       }
       this.onLog("Serial port disconnected.");
     } catch (error) {
-      this.onError("Error during disconnection:", error);
+      this.onError("Error during disconnection: " + error);
     }
   }
 
