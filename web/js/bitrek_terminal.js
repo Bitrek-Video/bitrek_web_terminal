@@ -166,12 +166,21 @@ class TermManager {
    * - //connect
    * - //disconnect
    * - //clear
+   * ... and any other command
    *
    * @private
    */
   _registerAutoComplete() {
     this.term.setCompleter((data) => {
-      const options = ["//help", "//connect", "//disconnect", "//clear"];
+      const options = [
+        "//help",
+        "//connect",
+        "//disconnect",
+        "//recconnect",
+        "//clear",
+        "//fullscreen",
+        "//export",
+      ];
       return options.filter((s) => s.startsWith(data))[0] || "";
     });
     this.containerEl.addEventListener("keydown", (e) => {
@@ -437,6 +446,13 @@ class TermManager {
       false,
       true
     );
+    this.echo(
+      this.prompts.system,
+      "<span class='term-command text-link' data-command='//fullscreen'>//fullscreen</span> - Toggle full screen mode",
+      true,
+      false,
+      true
+    );
     this.emptyLine();
     this.ask();
   }
@@ -515,6 +531,48 @@ class TermManager {
   }
 
   /**
+   * Toggles the terminal's full screen mode.
+   * @this {TermManager}
+   */
+  toggleFullscreen() {
+    const terminal = this.containerEl;
+
+    terminal.classList.toggle("fullscreen");
+
+    const isFullscreen = terminal.classList.contains("fullscreen");
+
+    // TODO: Add parameter to toggle fullscreen browser window
+    // if (isFullscreen) {
+    //   if (terminal.requestFullscreen) {
+    //     terminal.requestFullscreen();
+    //   } else if (terminal.mozRequestFullScreen) {
+    //     // Firefox
+    //     terminal.mozRequestFullScreen();
+    //   } else if (terminal.webkitRequestFullscreen) {
+    //     // Chrome, Safari and Opera
+    //     terminal.webkitRequestFullscreen();
+    //   } else if (terminal.msRequestFullscreen) {
+    //     // IE/Edge
+    //     terminal.msRequestFullscreen();
+    //   }
+    // } else {
+    //   if (document.exitFullscreen) {
+    //     document.exitFullscreen();
+    //   } else if (document.mozCancelFullScreen) {
+    //     // Firefox
+    //     document.mozCancelFullScreen();
+    //   } else if (document.webkitExitFullscreen) {
+    //     // Chrome, Safari and Opera
+    //     document.webkitExitFullscreen();
+    //   } else if (document.msExitFullscreen) {
+    //     // IE/Edge
+    //     document.msExitFullscreen();
+    //   }
+    // }
+    this.ask();
+  }
+
+  /**
    * Simulates user input by writing the given data to the terminal and
    * calling the terminalWrapper function as if the user had entered it.
    * @param {string} data - The data to simulate as user input.
@@ -581,6 +639,9 @@ class TermManager {
             setButtonsState(true);
           }
         }, 200);
+        break;
+      case "//fullscreen":
+        this.toggleFullscreen();
         break;
       default:
         if (data.startsWith("//connect")) {
