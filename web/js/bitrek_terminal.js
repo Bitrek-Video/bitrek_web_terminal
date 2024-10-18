@@ -539,7 +539,7 @@ class TermManager {
 
     terminal.classList.toggle("fullscreen");
 
-    const isFullscreen = terminal.classList.contains("fullscreen");
+    // const isFullscreen = terminal.classList.contains("fullscreen");
 
     // TODO: Add parameter to toggle fullscreen browser window
     // if (isFullscreen) {
@@ -872,11 +872,28 @@ class TermManager {
    * @returns {string} The plain text content of the terminal container.
    */
   _exportAsPlain() {
-    return this.containerEl.innerText
-      .replace(/<[^>]*>/g, "")
-      .replace(/^\s+|\s+$/g, "")
-      .replace(/📋/g, "")
-      .replace(/✅/g, "");
+    const clonedElement = this.containerEl.cloneNode(true);
+
+    clonedElement
+      .querySelectorAll(".xt-cursor, .xt-stdin, .copy-button")
+      .forEach((el) => el.remove());
+
+    let toExport = clonedElement.innerHTML;
+    toExport = toExport.replace(/<br>/g, "\n");
+    toExport = toExport.replace(/<[^>]*>/g, "");
+    toExport = toExport.trim();
+    toExport = toExport.replace(/<span class="copy-button">.*<\/span>/g, "");
+    toExport = toExport.replace(/&gt;/g, ">");
+    toExport = toExport.replace(/&lt;/g, "<");
+
+    // normalize newlines
+    toExport = toExport.replace(/\r\n/g, "\n");
+    toExport = toExport.replace(/\r/g, "\n");
+
+    // remove double newlines
+    toExport = toExport.replace(/\n\n/g, "\n");
+
+    return toExport.trim();
   }
 
   /**
