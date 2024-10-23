@@ -3,6 +3,8 @@
  *  @author Henry Hale
  *  @license MIT
  *  @url https://github.com/henryhale/xterminal
+ *
+ * Slightly modified version of XTerminal - removed autoscroll to bottom of terminal when new data is added - and paramitized it in another class-wrapper
  */
 !(function (t, e) {
   "object" == typeof exports && "undefined" != typeof module
@@ -513,11 +515,7 @@
     L = "xt-cursor",
     P = "xt-stdout",
     H = "xt-stdin";
-  function C(t) {
-    // t &&
-    //   t.scrollTop + t.clientHeight >= t.scrollHeight &&
-    //   t.scrollTo(0, t.scrollHeight);
-  }
+  function C(t) {}
   function D(t, e) {
     var n = document.createElement(t);
     return E(e)

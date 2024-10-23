@@ -36,6 +36,16 @@ class WebSerial {
     this.flowControl = flowControl;
   }
 
+  /**
+   * Opens a serial port connection and sets up the input and output streams.
+   * @param {number} [baudRate] The baud rate to use for the serial port.
+   * @param {number} [dataBits] The number of data bits to use for the serial port.
+   * @param {number} [stopBits] The number of stop bits to use for the serial port.
+   * @param {string} [parity] The parity bit to use for the serial port.
+   * @param {number} [globalBuffer] The size of the global buffer.
+   * @param {string} [flowControl] The flow control to use for the serial port.
+   * @throws {Error} If the serial port cannot be opened.
+   */
   async connect(
     baudRate = this.baudRate,
     dataBits = this.dataBits,
@@ -77,52 +87,6 @@ class WebSerial {
     } catch (error) {
       console.error("Failed to connect to serial port:" + error);
       this.onError("Failed to connect to serial port:" + error);
-    }
-  }
-
-  /**
-   * Reads data from the serial port and splits it into individual messages
-   * (delimited by newlines). Any messages that are longer than the buffer size
-   * are trimmed to the buffer size. If the buffer is longer than the buffer size,
-   * it is trimmed to the buffer size. If an error occurs while reading from the
-   * serial port, any data that has been read is processed and then the buffer is
-   * cleared.
-   *
-   * @private
-   *
-   * @returns {Promise<void>}
-   */
-  async _readLoop() {
-    try {
-      while (this.reader) {
-        const { value, done } = await this.reader.read();
-        if (done) {
-          break;
-        }
-        this.buffer += value;
-        if (this.buffer.length > this.lineBufferSize) {
-          console.warn("Buffer limit exceeded. Trimming data.");
-          this.buffer = this.buffer.slice(-this.lineBufferSize);
-        }
-        const messages = this.buffer.split("\n");
-        this.buffer = messages.pop();
-        messages.forEach((msg) => {
-          if (msg.trim()) {
-            this.onDataReceived(msg);
-          }
-        });
-      }
-    } catch (error) {
-      this.onError(
-        "Error reading from serial port: " +
-          (error || error.messages) +
-          " Try " +
-          "<span class='term-command text-link' data-command='//reconnect'>//reconnect</span>"
-      );
-      if (this.buffer.trim()) {
-        this.onDataReceived(this.buffer);
-        this.buffer = "";
-      }
     }
   }
 
@@ -242,5 +206,51 @@ class WebSerial {
       console.log(data);
       callback(data);
     };
+  }
+
+  /**
+   * Reads data from the serial port and splits it into individual messages
+   * (delimited by newlines). Any messages that are longer than the buffer size
+   * are trimmed to the buffer size. If the buffer is longer than the buffer size,
+   * it is trimmed to the buffer size. If an error occurs while reading from the
+   * serial port, any data that has been read is processed and then the buffer is
+   * cleared.
+   *
+   * @private
+   *
+   * @returns {Promise<void>}
+   */
+  async _readLoop() {
+    try {
+      while (this.reader) {
+        const { value, done } = await this.reader.read();
+        if (done) {
+          break;
+        }
+        this.buffer += value;
+        if (this.buffer.length > this.lineBufferSize) {
+          console.warn("Buffer limit exceeded. Trimming data.");
+          this.buffer = this.buffer.slice(-this.lineBufferSize);
+        }
+        const messages = this.buffer.split("\n");
+        this.buffer = messages.pop();
+        messages.forEach((msg) => {
+          if (msg.trim()) {
+            this.onDataReceived(msg);
+          }
+        });
+      }
+    } catch (error) {
+      this.onError(
+        "Error reading from serial port: " +
+          (error || error.messages) +
+          " Try " +
+          "<span class='term-command text-link' data-command='//reconnect'>//reconnect</span>"
+      );
+      if (this.buffer.trim()) {
+        this.onDataReceived(this.buffer);
+        this.buffer = "";
+      }
+    }
   }
 }

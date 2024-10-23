@@ -1,4 +1,12 @@
 "use strict";
+/**
+ * Simulates a user clicking the connect button.
+ *
+ * Reads the values from the #baudRate, #dataBits, #stopBits, #parity, #bufferSize,
+ * and #flowControl form elements and passes them to the connectSerial function.
+ *
+ * @see connectSerial
+ */
 function connectSerialBtn() {
   const baudEl = document.getElementById("baudRate");
   const dataBitsEl = document.getElementById("dataBits");
@@ -37,6 +45,11 @@ function disconnectSerialBtn() {
   bitrekTerm.simulateWrite("//disconnect");
 }
 
+/**
+ * Simulates the user entering the "//export" command with the specified type.
+ *
+ * @param {string} type - The type of export format ('plain' or 'html').
+ */
 function exportTerm(type) {
   switch (type) {
     case "html":

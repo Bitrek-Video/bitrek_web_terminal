@@ -1,6 +1,21 @@
 "use strict";
 
 class TermManager {
+  /**
+   * Constructor for the TermManager class.
+   *
+   * @param {string} containerId The id of the container element to render the terminal in.
+   * @param {string} [timeFormat="<span class='text-muted'>[%H:%M:%S]</span>"] The format string for the timestamp.
+   * @param {object} [prompts] An object with the following properties:
+   * - user: The prompt string for user commands.
+   * - root: The prompt string for root commands.
+   * - system: The prompt string for system commands.
+   * - answer: The prompt string for answer commands.
+   * @param {string[]} [welcomeMessage] An array of welcome messages to display to the user.
+   * @param {boolean} [showCopyButton=true] Whether to show the copy button.
+   *
+   * @throws {Error} If the container element is not found.
+   */
   constructor(
     containerId,
     timeFormat = "<span class='text-muted'>[%H:%M:%S]</span>",
@@ -95,135 +110,6 @@ class TermManager {
    */
   checkConnectAbility() {
     return "serial" in navigator;
-  }
-
-  /**
-   * Updates all elements with the class `update-time-auto` with the current
-   * time formatted according to the `timeFormat` option.
-   *
-   * @private
-   */
-  _updateTime() {
-    try {
-      if (!this.timeUnderUpdate) {
-        return;
-      }
-      const selector = document.getElementsByClassName("update-time-auto");
-      selector[selector.length - 1].innerHTML = this.formatTime();
-    } catch (e) {}
-  }
-
-  /**
-   * Registers an event listener on the terminal container to catch clicks on
-   * elements with the class `term-command`. When such an element is clicked,
-   * the `data-command` attribute of the element is used to simulate a write
-   * to the terminal.
-   *
-   * @private
-   */
-  _registerLinks() {
-    this.containerEl.addEventListener("click", (event) => {
-      const target = event.target;
-      if (target.matches(".term-command")) {
-        this.simulateWrite(target.dataset.command);
-      }
-    });
-  }
-
-  /**
-   * Registers an event listener on the terminal container to catch clicks on
-   * elements with the class `copy-button`. When such an element is clicked,
-   * the `data-clipboard-text` attribute of the element is used to copy the text
-   * to the clipboard, after removing any HTML tags.
-   *
-   * @private
-   */
-  _registerCopyButton() {
-    this.containerEl.addEventListener("click", (event) => {
-      const target = event.target;
-      if (target.matches(".copy-button")) {
-        const areDisabled = target.getAttribute("data-disabled");
-        if (areDisabled) {
-          return;
-        }
-        let toCopy = target.getAttribute("data-clipboard-text");
-        toCopy = toCopy.replace(/<[^>]*>/g, "");
-        this._copyTextToClipboard(toCopy);
-        target.innerText = "✅";
-        setTimeout(() => {
-          target.innerText = "📋";
-        }, 4000);
-      }
-    });
-  }
-
-  /**
-   * Registers an autocomplete completer on the terminal. The completer will
-   * complete any of the following commands with the shortest matching prefix
-   * when the TAB key is pressed:
-   *
-   * - //help
-   * - //connect
-   * - //disconnect
-   * - //clear
-   * ... and any other command
-   *
-   * @private
-   */
-  _registerAutoComplete() {
-    this.term.setCompleter((data) => {
-      const options = [
-        "//help",
-        "//connect",
-        "//disconnect",
-        "//recconnect",
-        "//clear",
-        "//fullscreen",
-        "//export",
-      ];
-      return options.filter((s) => s.startsWith(data))[0] || "";
-    });
-    this.containerEl.addEventListener("keydown", (e) => {
-      if (e.key === "Tab") {
-        e.preventDefault(); // do not focust next window element
-      }
-    });
-  }
-
-  /**
-   * Copies the given text to the clipboard. This is a fallback for browsers
-   * that do not support the modern `navigator.clipboard` API.
-   *
-   * This function creates a temporary `textarea` element, sets its value to
-   * the given text, and then uses the `execCommand("copy")` command to copy
-   * the text to the clipboard. It then removes the temporary `textarea`
-   * element from the page.
-   *
-   * @param {string} text The text to copy to the clipboard.
-   *
-   * @private
-   */
-  _fallbackCopyTextToClipboard(text) {
-    let textArea = document.createElement("textarea");
-    textArea.value = text;
-
-    textArea.style.top = "0";
-    textArea.style.left = "0";
-    textArea.style.position = "fixed";
-
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-
-    try {
-      let successful = document.execCommand("copy");
-      let msg = successful ? "successful" : "unsuccessful";
-      console.log("Fallback: Copying text command was " + msg);
-    } catch (err) {
-      console.error("Fallback: Oops, unable to copy", err);
-    }
-
-    document.body.removeChild(textArea);
   }
 
   /**
@@ -448,7 +334,7 @@ class TermManager {
     );
     this.echo(
       this.prompts.system,
-      "<span class='term-command text-link' data-command='//fullscreen'>//fullscreen</span> - Toggle full screen mode",
+      "<span class='term-command text-link' data-command='//fullscreen no'>//fullscreen</span> [toggleWindow=no] - Toggle full screen mode. If toggleWindow is set to \"yes\", the browser window also will be toggled",
       true,
       false,
       true
@@ -531,56 +417,63 @@ class TermManager {
   }
 
   /**
-   * Toggles the terminal's full screen mode.
-   * @this {TermManager}
+   * Toggle the terminal to full screen mode.
+   * @param {boolean} toggleBrowserWindow - Whether to toggle the entire browser window to full screen mode.
    */
-  toggleFullscreen() {
+  toggleFullscreen(toggleBrowserWindow = "no") {
     const terminal = this.containerEl;
 
     terminal.classList.toggle("fullscreen");
 
-    // const isFullscreen = terminal.classList.contains("fullscreen");
+    if (toggleBrowserWindow === "yes") {
+      const isFullscreen = terminal.classList.contains("fullscreen");
 
-    // TODO: Add parameter to toggle fullscreen browser window
-    // if (isFullscreen) {
-    //   if (terminal.requestFullscreen) {
-    //     terminal.requestFullscreen();
-    //   } else if (terminal.mozRequestFullScreen) {
-    //     // Firefox
-    //     terminal.mozRequestFullScreen();
-    //   } else if (terminal.webkitRequestFullscreen) {
-    //     // Chrome, Safari and Opera
-    //     terminal.webkitRequestFullscreen();
-    //   } else if (terminal.msRequestFullscreen) {
-    //     // IE/Edge
-    //     terminal.msRequestFullscreen();
-    //   }
-    // } else {
-    //   if (document.exitFullscreen) {
-    //     document.exitFullscreen();
-    //   } else if (document.mozCancelFullScreen) {
-    //     // Firefox
-    //     document.mozCancelFullScreen();
-    //   } else if (document.webkitExitFullscreen) {
-    //     // Chrome, Safari and Opera
-    //     document.webkitExitFullscreen();
-    //   } else if (document.msExitFullscreen) {
-    //     // IE/Edge
-    //     document.msExitFullscreen();
-    //   }
-    // }
+      if (isFullscreen) {
+        if (terminal.requestFullscreen) {
+          terminal.requestFullscreen();
+        } else if (terminal.mozRequestFullScreen) {
+          // Firefox
+          terminal.mozRequestFullScreen();
+        } else if (terminal.webkitRequestFullscreen) {
+          // Chrome, Safari and Opera
+          terminal.webkitRequestFullscreen();
+        } else if (terminal.msRequestFullscreen) {
+          // IE/Edge
+          terminal.msRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.mozCancelFullScreen) {
+          // Firefox
+          document.mozCancelFullScreen();
+        } else if (document.webkitExitFullscreen) {
+          // Chrome, Safari and Opera
+          document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+          // IE/Edge
+          document.msExitFullscreen();
+        }
+      }
+    }
     this.ask();
   }
 
   /**
-   * Simulates user input by writing the given data to the terminal and
-   * calling the terminalWrapper function as if the user had entered it.
-   * @param {string} data - The data to simulate as user input.
+   * Simulates a write to the terminal as if the user had typed
+   * the given data and pressed Enter.
+   *
+   * @param {string} data - The data to simulate typing.
+   * @param {boolean} [saveHistory=true] - Whether to save the data to the
+   * terminal's history.
    */
-  simulateWrite(data) {
+  simulateWrite(data, saveHistory = true) {
     this._scrollBottom();
     this.term.writeln(data);
     this.terminalWrapper(data);
+    if (saveHistory) {
+      this.addToHistory(data);
+    }
   }
 
   /**
@@ -594,7 +487,7 @@ class TermManager {
         selector[i].classList.remove("update-time-auto");
       }
     }
-    this._scrollBottom();
+    this._scrollBottom(); // It's right way to scroll to the bottom when commands are sended (not only by user input);
     switch (data) {
       case "//clear":
         this.terminalClear();
@@ -603,7 +496,9 @@ class TermManager {
         this.terminalHelp();
         break;
       case "//disconnect":
-        disconnectSerial();
+        if (typeof disconnectSerial === "function") {
+          disconnectSerial();
+        }
         if (typeof setButtonsState === "function") {
           setButtonsState(false);
         }
@@ -617,132 +512,147 @@ class TermManager {
           );
           break;
         }
-        disconnectSerial();
+        if (typeof disconnectSerial === "function") {
+          disconnectSerial();
+        }
         if (typeof setButtonsState === "function") {
           setButtonsState(false);
         }
         this.areConnected = false;
-        if (typeof setButtonsState === "function") {
-          setButtonsState(false);
-        }
-        setTimeout(() => {
-          connectSerial(
-            this.lastConnectOptions.baudRate,
-            this.lastConnectOptions.dataBits,
-            this.lastConnectOptions.stopBits,
-            this.lastConnectOptions.parity,
-            this.lastConnectOptions.bufferSize,
-            this.lastConnectOptions.flowControl
-          );
-          this.areConnected = true;
-          if (typeof setButtonsState === "function") {
-            setButtonsState(true);
-          }
-        }, 200);
-        break;
-      case "//fullscreen":
-        this.toggleFullscreen();
-        break;
-      default:
-        if (data.startsWith("//connect")) {
-          let baudRate,
-            dataBits = 8,
-            stopBits = 1,
-            parity = "none",
-            bufferSize = 1024,
-            flowControl = "none";
-
-          const params = data.split(" ");
-
-          if (params.length >= 2) {
-            baudRate = parseInt(params[1], 10);
-          } else {
-            this.terminalWriteLog(
-              "No baud rate specified! Using 115200 by default.",
-              false
-            );
-            baudRate = 115200;
-          }
-
-          if (params.length >= 3) {
-            dataBits = params[2];
-          }
-          if (params.length >= 4) {
-            stopBits = params[3];
-          }
-          if (params.length >= 5) {
-            parity = params[4];
-          }
-          if (params.length >= 6) {
-            bufferSize = params[5];
-          }
-          if (params.length >= 7) {
-            flowControl = params[6];
-          }
-
-          if (typeof connectSerial === "function") {
+        if (typeof connectSerial !== "function") {
+          setTimeout(() => {
             connectSerial(
-              baudRate,
-              dataBits,
-              stopBits,
-              parity,
-              bufferSize,
-              flowControl
+              this.lastConnectOptions.baudRate,
+              this.lastConnectOptions.dataBits,
+              this.lastConnectOptions.stopBits,
+              this.lastConnectOptions.parity,
+              this.lastConnectOptions.bufferSize,
+              this.lastConnectOptions.flowControl
             );
-
-            this.lastConnectOptions = {
-              baudRate,
-              dataBits,
-              stopBits,
-              parity,
-              bufferSize,
-              flowControl,
-            };
-
-            this.terminalWriteLog(
-              "Please choose a serial port from the browser prompt to establish a connection.",
-              false
-            );
+            this.areConnected = true;
             if (typeof setButtonsState === "function") {
               setButtonsState(true);
             }
-            this.areConnected = true;
-          } else {
-            this.terminalWriteLog(
-              "Could not connect to the serial port. Are you sure it is installed and enabled?",
-              true
-            );
-          }
-        } else if (data.startsWith("//export")) {
-          const params = data.split(" ");
-          let type = "plain";
-          let filename = "";
-
-          if (params.length >= 2) {
-            type = params[1];
-          }
-          if (params.length >= 3) {
-            filename = params[2];
-          }
-          this.exportFile(type, filename);
-        } else {
-          if (this.areConnected) {
-            if (data.length > 0) {
-              sendData(data + "\r\n");
-              this.ask();
-            } else {
-              sendData("\r\n");
-              this.ask();
-            }
-          } else {
-            this.terminalWriteLog(
-              "Please connect to the serial port before sending data. Type <span class='term-command text-link' data-command='//help'>//help</span> for more information.",
-              true
-            );
-          }
+          }, 200);
         }
         break;
+      default: // Parameterized commands
+        const params = data.split(" ");
+        switch (true) {
+          case data.startsWith("//export"):
+            let type = "plain";
+            let filename = "";
+            if (params.length >= 2) {
+              type = params[1];
+            }
+            if (params.length >= 3) {
+              filename = params[2];
+            }
+            this.exportFile(type, filename);
+            break;
+          case data.startsWith("//connect"):
+            let baudRate,
+              dataBits = 8,
+              stopBits = 1,
+              parity = "none",
+              bufferSize = 1024,
+              flowControl = "none";
+
+            if (params.length >= 2) {
+              baudRate = parseInt(params[1], 10);
+            } else {
+              this.terminalWriteLog(
+                "No baud rate specified! Using 115200 by default.",
+                false
+              );
+              baudRate = 115200;
+            }
+
+            if (params.length >= 3) {
+              dataBits = params[2];
+            }
+            if (params.length >= 4) {
+              stopBits = params[3];
+            }
+            if (params.length >= 5) {
+              parity = params[4];
+            }
+            if (params.length >= 6) {
+              bufferSize = params[5];
+            }
+            if (params.length >= 7) {
+              flowControl = params[6];
+            }
+
+            if (typeof connectSerial === "function") {
+              connectSerial(
+                baudRate,
+                dataBits,
+                stopBits,
+                parity,
+                bufferSize,
+                flowControl
+              );
+
+              this.lastConnectOptions = {
+                baudRate,
+                dataBits,
+                stopBits,
+                parity,
+                bufferSize,
+                flowControl,
+              };
+
+              this.terminalWriteLog(
+                "Please choose a serial port from the browser prompt to establish a connection.",
+                false
+              );
+              if (typeof setButtonsState === "function") {
+                setButtonsState(true);
+              }
+              this.areConnected = true;
+            } else {
+              this.terminalWriteLog(
+                "Could not connect to the serial port. Are you sure it is installed and enabled?",
+                true
+              );
+            }
+            break;
+          case data.startsWith("//fullscreen"):
+            if (params.length >= 2) {
+              this.toggleFullscreen(params[1]);
+            } else {
+              this.toggleFullscreen();
+            }
+            break;
+          default: // Plain text or passthrough commands
+            if (this.areConnected) {
+              if (data.length > 0) {
+                sendData(data + "\r\n");
+                this.ask();
+              } else {
+                sendData("\r\n");
+                this.ask();
+              }
+            } else {
+              this.terminalWriteLog(
+                "Please connect to the serial port before sending data. Type <span class='term-command text-link' data-command='//help'>//help</span> for more information.",
+                true
+              );
+            }
+        }
     }
+  }
+
+  /**
+   * Adds a given history point to the terminal's history.
+   *
+   * @param {string} historyPoint - The command or text to be added to the terminal's history.
+   */
+  addToHistory(historyPoint) {
+    const previousHistory = this.term.history;
+    previousHistory.push(historyPoint);
+    this.term.history = previousHistory;
   }
 
   /**
@@ -750,9 +660,8 @@ class TermManager {
    * It adds the "paused" class to the container element, sets the timeUnderUpdate flag to false,
    * blurs the terminal and pauses it.
    *
-   * @private
    */
-  _pause() {
+  pause() {
     this.arePaused = true;
     this.containerEl.classList.add("paused");
     this.timeUnderUpdate = false;
@@ -765,9 +674,8 @@ class TermManager {
    * It removes the "paused" class from the container element, sets the timeUnderUpdate flag to true,
    * focuses the terminal and resumes it.
    *
-   * @private
    */
-  _resume() {
+  resume() {
     this.arePaused = false;
     this.containerEl.classList.remove("paused");
     this.timeUnderUpdate = true;
@@ -802,7 +710,7 @@ class TermManager {
         this.terminalWriteLog("Exporting history as HTML...");
         break;
     }
-    this._pause();
+    this.pause();
     let pageData;
     switch (type) {
       case "plain":
@@ -813,7 +721,7 @@ class TermManager {
         break;
     }
     this._downloadFile(filename, pageData);
-    this._resume();
+    this.resume();
   }
 
   /**
@@ -937,6 +845,7 @@ class TermManager {
     this.scrollEl.classList.add("blink-border");
     setTimeout(() => this.scrollEl.classList.remove("blink-border"), 300);
   }
+
   /**
    * Checks if the terminal's scroll position is at or near the bottom.
    *
@@ -948,12 +857,140 @@ class TermManager {
    * @private
    * @returns {boolean} True if the terminal is scrolled to the bottom or near it, false otherwise.
    */
-
   _checkScrolledToBottom() {
     const safeGap = 20;
     return (
       this.scrollEl.scrollTop + this.scrollEl.clientHeight >=
       this.scrollEl.scrollHeight - safeGap
     );
+  }
+
+  /**
+   * Updates all elements with the class `update-time-auto` with the current
+   * time formatted according to the `timeFormat` option.
+   *
+   * @private
+   */
+  _updateTime() {
+    try {
+      if (!this.timeUnderUpdate) {
+        return;
+      }
+      const selector = document.getElementsByClassName("update-time-auto");
+      selector[selector.length - 1].innerHTML = this.formatTime();
+    } catch (e) {}
+  }
+
+  /**
+   * Registers an event listener on the terminal container to catch clicks on
+   * elements with the class `term-command`. When such an element is clicked,
+   * the `data-command` attribute of the element is used to simulate a write
+   * to the terminal.
+   *
+   * @private
+   */
+  _registerLinks() {
+    this.containerEl.addEventListener("click", (event) => {
+      const target = event.target;
+      if (target.matches(".term-command")) {
+        this.simulateWrite(target.dataset.command);
+      }
+    });
+  }
+
+  /**
+   * Registers an event listener on the terminal container to catch clicks on
+   * elements with the class `copy-button`. When such an element is clicked,
+   * the `data-clipboard-text` attribute of the element is used to copy the text
+   * to the clipboard, after removing any HTML tags.
+   *
+   * @private
+   */
+  _registerCopyButton() {
+    this.containerEl.addEventListener("click", (event) => {
+      const target = event.target;
+      if (target.matches(".copy-button")) {
+        const areDisabled = target.getAttribute("data-disabled");
+        if (areDisabled) {
+          return;
+        }
+        let toCopy = target.getAttribute("data-clipboard-text");
+        toCopy = toCopy.replace(/<[^>]*>/g, "");
+        this._copyTextToClipboard(toCopy);
+        target.innerText = "✅";
+        setTimeout(() => {
+          target.innerText = "📋";
+        }, 4000);
+      }
+    });
+  }
+
+  /**
+   * Registers an autocomplete completer on the terminal. The completer will
+   * complete any of the following commands with the shortest matching prefix
+   * when the TAB key is pressed:
+   *
+   * - //help
+   * - //connect
+   * - //disconnect
+   * - //clear
+   * ... and any other command
+   *
+   * @private
+   */
+  _registerAutoComplete() {
+    this.term.setCompleter((data) => {
+      const options = [
+        "//help",
+        "//connect",
+        "//disconnect",
+        "//recconnect",
+        "//clear",
+        "//fullscreen",
+        "//export",
+      ];
+      return options.filter((s) => s.startsWith(data))[0] || "";
+    });
+    this.containerEl.addEventListener("keydown", (e) => {
+      if (e.key === "Tab") {
+        e.preventDefault(); // do not focust next window element
+      }
+    });
+  }
+
+  /**
+   * Copies the given text to the clipboard. This is a fallback for browsers
+   * that do not support the modern `navigator.clipboard` API.
+   *
+   * This function creates a temporary `textarea` element, sets its value to
+   * the given text, and then uses the `execCommand("copy")` command to copy
+   * the text to the clipboard. It then removes the temporary `textarea`
+   * element from the page.
+   *
+   * @param {string} text The text to copy to the clipboard.
+   *
+   * @private
+   */
+  _fallbackCopyTextToClipboard(text) {
+    let textArea = document.createElement("textarea");
+    textArea.value = text;
+
+    textArea.style.top = "0";
+    textArea.style.left = "0";
+    textArea.style.position = "fixed";
+
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    try {
+      let successful = document.execCommand("copy");
+      let msg = successful ? "successful" : "unsuccessful";
+      console.log("Fallback: Copying text command was " + msg);
+    } catch (err) {
+      console.error("Fallback: Oops, unable to copy", err);
+    }
+
+    document.body.removeChild(textArea);
   }
 }

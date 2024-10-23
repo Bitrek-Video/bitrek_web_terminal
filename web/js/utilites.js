@@ -1,15 +1,18 @@
 "use strict";
 
-// Initiate XTerminal and register callbacks
+// Initiate XTerminal and bind callbacks
 const bitrekTerm = new TermManager("terminal");
 
 bitrekTerm.showWelcomeMessage();
 
 bitrekTerm.term.on("data", bitrekTerm.terminalWrapper);
-bitrekTerm.ask();
+bitrekTerm.pause();
 
-// Initialize WebSerial and register callbacks
+// Initialize WebSerial and bind callbacks
 const bitrekSerial = new WebSerial();
+
+bitrekTerm.resume();
+bitrekTerm.ask();
 
 bitrekSerial.onData((data) => {
   bitrekTerm.terminalWriteOutput(data);
@@ -23,6 +26,18 @@ bitrekSerial.onLog((data) => {
   bitrekTerm.terminalWriteLog(data);
 });
 
+/**
+ * Establishes a serial port connection and sets up the input and output streams.
+ *
+ * @param {number} [baudRate=115200] The baud rate to use for the serial port.
+ * @param {number} [dataBits=8] The number of data bits to use for the serial port.
+ * @param {number} [stopBits=1] The number of stop bits to use for the serial port.
+ * @param {string} [parity="none"] The parity bit to use for the serial port.
+ * @param {number} [globalBuffer=1024] The size of the global buffer.
+ * @param {string} [flowControl="none"] The flow control to use for the serial port.
+ *
+ * @returns {Promise<void>}
+ */
 async function connectSerial(
   baudRate = 115200,
   dataBits = 8,
