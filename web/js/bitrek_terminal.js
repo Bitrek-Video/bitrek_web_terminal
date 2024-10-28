@@ -1,5 +1,6 @@
 "use strict";
 
+// TODO: add time format; showCopyButton; showWelcomeMessage to settings;
 class TermManager {
   /**
    * Constructor for the TermManager class.
@@ -32,6 +33,22 @@ class TermManager {
     ],
     showCopyButton = true
   ) {
+    this.settings = {
+      cursor_blink: true,
+      tx_end_of_line: "lf",
+      autosave_uart_settings: true,
+    };
+    this.uartSettings = {
+      baud_rate: "115200",
+      data_bits: "8",
+      stop_bits: "1",
+      parity: "none",
+      buffer_size: "1024",
+      flow_control: "none",
+    };
+    this.settings = this.loadTerminalSettingsLocalStorage();
+    this.uartSettings = this.loadUARTSettingsLocalStorage();
+    this.txEOL = "\n";
     this.term = new XTerminal();
     this.containerId = containerId;
     this.containerEl = document.getElementById(containerId);
@@ -57,6 +74,9 @@ class TermManager {
     this._registerLinks();
     this._registerAutoComplete();
 
+    this._setSettingsModalValues();
+    this._registerUARTchangeSettings();
+
     if (this.showCopyButton) {
       this._registerCopyButton();
     }
@@ -66,6 +86,8 @@ class TermManager {
       this.timeUnderUpdate = true;
       setInterval(() => this._updateTime(), 1000);
     }
+
+    this.doPerformSettings();
   }
 
   /**
@@ -238,7 +260,7 @@ class TermManager {
         copyButton.setAttribute("data-disabled", "true");
         copyButton.classList.add("full-transparent");
       }
-      copyButton.textContent = "📋";
+      copyButton.classList.add("bi", "text-secondary", "bi-clipboard2");
       copyButton.setAttribute("data-clipboard-text", originalData);
       data = copyButton.outerHTML + data;
     }
@@ -339,6 +361,27 @@ class TermManager {
       false,
       true
     );
+    this.echo(
+      this.prompts.system,
+      "<span class='term-command text-link' data-command='//cleansettings'>//cleansettings</span> [both|uart|terminal] - Remove UART and/or terminal settings from the localStorage",
+      true,
+      false,
+      true
+    );
+    this.echo(
+      this.prompts.system,
+      "<span class='term-command text-link' data-command='//set blink_cursor=true'>//set blink_cursor=false</span> Set settings param to value. In this case will set blink_cursor to false. Mulltiple settings can be set at the same time using a space as separator",
+      true,
+      false,
+      true
+    );
+    this.echo(
+      this.prompts.system,
+      "<span class='term-command text-link' data-command='//get'>//get</span> [paramname1];[paramname2] Get settings param. In this case will get blink_cursor setting. Multiple settings can be retrieved at the same time using a  a space as separator. Empty param will get all settings",
+      true,
+      false,
+      true
+    );
     this.emptyLine();
     this.ask();
   }
@@ -364,19 +407,41 @@ class TermManager {
   /**
    * Writes log messages to the terminal in cyan.
    * @param {string} data - The log message to display.
-   * @param {boolean} [doAsk=true] - Whether to ask the user for input after writing the log message.
+   * @param {boolean} [needAsk=true] - Whether to ask the user for input after writing the log message.
    */
-  terminalWriteLog(data, doAsk = true) {
+  terminalWriteLog(data, needAsk = true, hideCopyButton = true) {
     this.echo(
       this.prompts.system,
       "<i class='text-info'>" + data + "</i>",
       true,
       false,
-      true,
+      hideCopyButton,
       false,
       data
     );
-    if (doAsk) {
+    if (needAsk) {
+      this.ask();
+    }
+  }
+
+  /**
+   * Writes warning messages to the terminal in bold yellow.
+   *
+   * @param {string} data - The warning message to display.
+   * @param {boolean} [needAsk=true] - Whether to ask the user for input after writing the warning message.
+   */
+  terminalWriteWarn(data, needAsk = true) {
+    this.emptyLine();
+    this.echo(
+      this.prompts.system,
+      "<b class='text-warning'>" + data + "</b>",
+      true,
+      false,
+      false,
+      false,
+      data
+    );
+    if (needAsk) {
       this.ask();
     }
   }
@@ -625,13 +690,139 @@ class TermManager {
               this.toggleFullscreen();
             }
             break;
+          case data.startsWith("//cleansettings"):
+            if (params.length == 2) {
+              switch (params[1]) {
+                case "terminal":
+                  this.cleanTerminalLocalStorage();
+                  this.terminalWriteLog("Cleared terminal settings.", true);
+                  break;
+                case "uart":
+                  this.cleanUARTSettingsLocalStorage();
+                  this.terminalWriteLog("Cleared UART settings.", true);
+                  break;
+                case "both":
+                  this.cleanTerminalLocalStorage();
+                  this.cleanUARTSettingsLocalStorage();
+                  this.terminalWriteLog(
+                    "Cleared terminal and UART settings.",
+                    true
+                  );
+                  break;
+                default:
+                  this.terminalWriteWarn(
+                    "Wrong argument for //cleansettings command. Please use 'both', 'terminal' or 'uart'.",
+                    true
+                  );
+              }
+            } else {
+              this.terminalWriteWarn(
+                "This command requires an argument: [both|terminal|uart]",
+                true
+              );
+            }
+            break;
+          case data.startsWith("//get"):
+            if (params.length == 1) {
+              const readable = JSON.stringify(this.settings, null, 2);
+              const lines = readable.split("\n");
+              const linesCount = lines.length;
+
+              lines.forEach((line, index) => {
+                const hideCopyButton = index > 0 && index < linesCount - 1;
+                this.terminalWriteLog(line, false, !hideCopyButton);
+              });
+
+              this.ask();
+            } else {
+              // 1. Filter settings
+              const settingsSubset = {};
+              params.forEach((param) => {
+                const key = param.trim();
+                if (key && this.settings.hasOwnProperty(key)) {
+                  settingsSubset[key] = this.settings[key];
+                }
+              });
+
+              // 2. Remove empty keys
+              Object.keys(settingsSubset).forEach((key) => {
+                if (settingsSubset[key] === "") {
+                  delete settingsSubset[key];
+                }
+              });
+
+              // 3. Print the filtered settings
+              const readableSubset = JSON.stringify(settingsSubset, null, 2);
+              const lines = readableSubset.split("\n");
+              const linesCount = lines.length;
+
+              lines.forEach((line, index) => {
+                const hideCopyButton = index > 0 && index < linesCount - 1;
+                this.terminalWriteLog(line, false, !hideCopyButton);
+              });
+
+              this.ask();
+            }
+            break;
+          case data.startsWith("//set"):
+            // TODO: for all cases check avaiable values
+            if (params.length === 1) {
+              this.terminalWriteLog(
+                "No parameters provided. Use format: //set param1=value1; param2=value2;",
+                false
+              );
+              this.ask();
+            } else {
+              // 1. Process each parameter in the format x=y;z=v;
+              const settingsUpdates = {};
+              params.forEach((param) => {
+                const pairs = param.split(";");
+                pairs.forEach((pair) => {
+                  const [key, value] = pair.split("=").map((p) => p.trim());
+
+                  if (key && value !== undefined) {
+                    settingsUpdates[key] = value;
+                  }
+                });
+              });
+
+              // 2. Update this.settings with the new values
+              Object.keys(settingsUpdates).forEach((key) => {
+                if (this.settings.hasOwnProperty(key)) {
+                  if (settingsUpdates[key] === "true") {
+                    settingsUpdates[key] = true;
+                  } else if (settingsUpdates[key] === "false") {
+                    settingsUpdates[key] = false;
+                  }
+                  this.settings[key] = settingsUpdates[key];
+                }
+              });
+
+              // 3. Log the updated settings
+              const readableUpdated = JSON.stringify(this.settings, null, 2);
+              const lines = readableUpdated.split("\n");
+              const linesCount = lines.length;
+
+              lines.forEach((line, index) => {
+                const hideCopyButton = index > 0 && index < linesCount - 1;
+                this.terminalWriteLog(line, false, !hideCopyButton);
+              });
+
+              this.ask();
+
+              // 4. Save and Perform settings
+              this.saveTerminalSettingsLocalStorage(this.settings);
+              this.doPerformSettings();
+            }
+            break;
+
           default: // Plain text or passthrough commands
             if (this.areConnected) {
               if (data.length > 0) {
-                sendData(data + "\r\n");
+                sendData(data + this.txEOL);
                 this.ask();
               } else {
-                sendData("\r\n");
+                sendData(this.txEOL);
                 this.ask();
               }
             } else {
@@ -722,6 +913,83 @@ class TermManager {
     }
     this._downloadFile(filename, pageData);
     this.resume();
+  }
+
+  /**
+   * Saves the given settings object to the user's local storage.
+   *
+   * @param {object} settings The settings object to save.
+   */
+  saveTerminalSettingsLocalStorage(settings) {
+    localStorage.setItem("bitrek_terminal_settings", JSON.stringify(settings));
+  }
+
+  /**
+   * Loads the terminal settings object from the user's local storage. If the settings object
+   * exists in local storage, it will be loaded into the `settings` property of
+   * the TermManager object. If the settings object does not exist, the `settings`
+   * property will be left unchanged.
+   *
+   * @returns {object} The loaded settings object.
+   */
+  loadTerminalSettingsLocalStorage() {
+    const settings = JSON.parse(
+      localStorage.getItem("bitrek_terminal_settings")
+    );
+    if (settings) {
+      return settings;
+    } else {
+      return this.settings;
+    }
+  }
+
+  /**
+   * Removes the terminal settings object from the user's local storage.
+   * Resets all terminal settings UI elements to their default values.
+   */
+  cleanTerminalLocalStorage() {
+    localStorage.removeItem("bitrek_terminal_settings");
+    document.querySelectorAll(".uart_settings").forEach((el) => {
+      this._resetElementToDefault(el, false);
+    });
+    document.querySelectorAll(".terminal_settings").forEach((el) => {
+      this._resetElementToDefault(el, false);
+    });
+    this.doPerformSettings();
+  }
+
+  /**
+   * Saves the given UART settings object to the user's local storage.
+   *
+   * @param {object} settings The UART settings object to save.
+   */
+  saveUARTSettingsLocalStorage(settings) {
+    localStorage.setItem("bitrek_uart_settings", JSON.stringify(settings));
+  }
+
+  /**
+   * Loads the UART settings object from the user's local storage. If the settings object
+   * exists in local storage, it will be loaded into the `uartSettings` property of
+   * the TermManager object. If the settings object does not exist, the `uartSettings`
+   * property will be left unchanged.
+   */
+  loadUARTSettingsLocalStorage() {
+    const settings = JSON.parse(localStorage.getItem("bitrek_uart_settings"));
+    if (settings) {
+      return settings;
+    } else {
+      return this.uartSettings;
+    }
+  }
+
+  /**
+   * Removes the UART settings object from the user's local storage.
+   */
+  cleanUARTSettingsLocalStorage() {
+    localStorage.removeItem("bitrek_uart_settings");
+    document.querySelectorAll(".uart_settings").forEach((el) => {
+      this._resetElementToDefault(el, false);
+    });
   }
 
   /**
@@ -917,9 +1185,11 @@ class TermManager {
         let toCopy = target.getAttribute("data-clipboard-text");
         toCopy = toCopy.replace(/<[^>]*>/g, "");
         this._copyTextToClipboard(toCopy);
-        target.innerText = "✅";
+        target.classList.remove("bi-clipboard2", "text-seconary");
+        target.classList.add("bi-clipboard2-check", "text-success");
         setTimeout(() => {
-          target.innerText = "📋";
+          target.classList.add("bi-clipboard2", "text-seconary");
+          target.classList.remove("text-success", "bi-clipboard2-check");
         }, 4000);
       }
     });
@@ -948,6 +1218,9 @@ class TermManager {
         "//clear",
         "//fullscreen",
         "//export",
+        "//cleansettings",
+        "//set",
+        "//get",
       ];
       return options.filter((s) => s.startsWith(data))[0] || "";
     });
@@ -992,5 +1265,127 @@ class TermManager {
     }
 
     document.body.removeChild(textArea);
+  }
+
+  /**
+   * Performs the actual configuration changes to the terminal, based on the
+   * values in `this.settings`.
+   *
+   * @private
+   */
+  doPerformSettings() {
+    // Blink
+    if (this.settings.cursor_blink) {
+      document.querySelector(".xt-cursor").classList.add("xt-blink");
+    } else {
+      document.querySelector(".xt-cursor").classList.remove("xt-blink");
+    }
+
+    // TX EOL
+    if (this.settings.tx_end_of_line === "none") {
+      this.txEOL = "";
+    } else if (this.settings.tx_end_of_line === "lf") {
+      this.txEOL = "\n";
+    } else if (this.settings.tx_end_of_line === "cr") {
+      this.txEOL = "\r";
+    } else if (this.settings.tx_end_of_line === "crlf") {
+      this.txEOL = "\r\n";
+    }
+  }
+
+  /**
+   * Resets the given element to its default value.
+   *
+   * @param {Element} el The element to reset.
+   * @param {boolean} [doTrigger=false] Whether to trigger a change event on the element.
+   *
+   * @private
+   */
+  _resetElementToDefault(el, doTrigger = false) {
+    if (!el) {
+      return;
+    }
+    const defaultValue = el.getAttribute("data-default");
+    if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+      el.value = defaultValue;
+    } else if (el.tagName === "SELECT") {
+      const matchingOption = Array.from(el.options).find((option) =>
+        option.hasAttribute("data-default")
+      );
+      if (matchingOption) {
+        el.value = matchingOption.value;
+      } else {
+        el.value = defaultValue;
+      }
+    } else {
+      el.textContent = defaultValue;
+    }
+    if (doTrigger) {
+      el.dispatchEvent(new Event("change"));
+    }
+  }
+
+  /**
+   * Registers event listeners for the UART settings form elements to update the
+   * this.uartSettings object and save it to local storage if the user has
+   * chosen to autosave the settings.
+   *
+   * @private
+   */
+  _registerUARTchangeSettings() {
+    document.querySelectorAll(".uart_settings").forEach((el) => {
+      const key = el.getAttribute("data-key");
+      const value = this.uartSettings[key];
+
+      if (el.tagName === "SELECT" && value !== undefined) {
+        for (let option of el.options) {
+          option.selected = option.value === value;
+        }
+      } else {
+        if (el.value !== undefined) {
+          el.value = value;
+        }
+      }
+      el.addEventListener("change", () => {
+        if (this.settings.autosave_uart_settings) {
+          this.uartSettings[key] = el.value;
+          console.log(this.uartSettings);
+
+          localStorage.setItem(
+            "bitrek_uart_settings",
+            JSON.stringify(this.uartSettings)
+          );
+        }
+      });
+    });
+  }
+  /**
+   * Sets the values of all form elements with class "terminal_settings" to
+   * their corresponding values in this.settings.
+   *
+   * @private
+   */
+  _setSettingsModalValues() {
+    const settings = this.settings;
+    document.querySelectorAll(".terminal_settings").forEach((el) => {
+      const key = el.getAttribute("data-key");
+      let value = settings[key];
+      if (value === true) {
+        value = "true";
+      } else if (value === false) {
+        value = "false";
+      }
+      console.log(key, value);
+
+      if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+        el.value = value;
+      } else if (el.tagName === "SELECT") {
+        for (let option of el.options) {
+          option.selected = option.value === value;
+        }
+      } else {
+        el.textContent = value;
+      }
+    });
   }
 }

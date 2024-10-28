@@ -62,6 +62,46 @@ function exportTerm(type) {
 }
 
 /**
+ * Simulates sending the "//cleansettings both" command to the terminal,
+ * which is intended to clear all terminal settings.
+ */
+function cleanBothSettings() {
+  if (sureToProceed("Are you sure you want to clear all terminal settings?")) {
+    bitrekTerm.simulateWrite("//cleansettings both");
+  }
+
+  const modal = document.getElementById("settingsModal");
+  if (modal) {
+    const bootstrapModal = bootstrap.Modal.getInstance(modal);
+    bootstrapModal.hide();
+  }
+}
+
+/**
+ * Simulates the user entering the "//clear" command in the terminal, which
+ * clears the terminal's output.
+ */
+function clearTerminal() {
+  if (
+    sureToProceed(
+      "Are you sure you want to clear the terminal? \nHistory will be lost!"
+    )
+  ) {
+    bitrekTerm.simulateWrite("//clear");
+  }
+}
+
+/**
+ * Prompts the user with a confirmation dialog displaying the specified message.
+ *
+ * @param {string} message - The message to display in the confirmation dialog.
+ * @returns {boolean} True if the user confirms, otherwise false.
+ */
+function sureToProceed(message) {
+  return confirm(message);
+}
+
+/**
  * Enables or disables the buttons on the page depending on whether the serial port is connected.
  *
  * @param {boolean} state If true, the buttons will be disabled and the disconnect button will be shown.
@@ -96,5 +136,41 @@ function setButtonsState(state) {
     flowControlEl.disabled = false;
     connectBtn.classList.remove("d-none");
     disconnectBtn.classList.add("d-none");
+  }
+}
+
+/**
+ * Saves all the terminal settings to the local storage.
+ *
+ * This function first reads the current values of all elements with class
+ * "terminal_settings". It then constructs a "//set" command with all the
+ * values and sends it to the terminal.
+ */
+function saveSettings() {
+  // 1. Get values
+  const settingsUpdates = [];
+  document.querySelectorAll(".terminal_settings").forEach((el) => {
+    const key = el.getAttribute("data-key");
+    let value;
+
+    if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+      value = el.value;
+    } else if (el.tagName === "SELECT") {
+      value = el.value;
+    }
+    if (key && value !== undefined) {
+      settingsUpdates.push(`${key}=${value}`);
+    }
+  });
+
+  // 2. Save values
+  const command = `//set ${settingsUpdates.join(";")};`;
+  bitrekTerm.simulateWrite(command);
+
+  // 3. Close bootstrap modal
+  const modal = document.getElementById("settingsModal");
+  if (modal) {
+    const bootstrapModal = bootstrap.Modal.getInstance(modal);
+    bootstrapModal.hide();
   }
 }

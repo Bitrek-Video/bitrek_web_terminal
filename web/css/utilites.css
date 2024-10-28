@@ -67,7 +67,7 @@
 	}
 }
 
-.xt-cursor {
+.xt-cursor.xt-blink {
 	animation: blink 2s ease-in-out infinite;
 }
 
@@ -124,4 +124,8 @@
 
 .blink-border::-webkit-scrollbar-thumb {
 	background: green !important;
+}
+
+.modal.show {
+	backdrop-filter: saturate(0.2) brightness(0.9);
 }
