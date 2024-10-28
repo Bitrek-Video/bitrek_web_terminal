@@ -40,6 +40,8 @@ Copy `web` folder to your web server such as Apache or Nginx.
 
 You can play with the Bitrek Web Terminal [here](https://bitrek.video/terminal) without any instalation.
 
+Development version avaiable [here](https://prod.bitrek.video/serial_test/).
+
 ## Contributing
 
 Contributions are welcome! Please fork this repository and submit a pull request for any improvements or fixes.
