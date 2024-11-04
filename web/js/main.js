@@ -62,12 +62,44 @@ function exportTerm(type) {
 }
 
 /**
- * Simulates sending the "//cleansettings both" command to the terminal,
+ * Simulates sending the "//cleansettings terminal" command to the terminal,
  * which is intended to clear all terminal settings.
  */
 function cleanBothSettings() {
   if (sureToProceed("Are you sure you want to clear all terminal settings?")) {
-    bitrekTerm.simulateWrite("//cleansettings both");
+    bitrekTerm.simulateWrite("//cleansettings terminal");
+  }
+
+  const modal = document.getElementById("settingsModal");
+  if (modal) {
+    const bootstrapModal = bootstrap.Modal.getInstance(modal);
+    bootstrapModal.hide();
+  }
+}
+
+/**
+ * Simulates sending the "//cleansettings uart" command to the terminal,
+ * which is intended to clear all UART settings.
+ */
+function cleanUARTSettings() {
+  if (sureToProceed("Are you sure you want to clear UART settings?")) {
+    bitrekTerm.simulateWrite("//cleansettings uart");
+  }
+
+  const modal = document.getElementById("settingsModal");
+  if (modal) {
+    const bootstrapModal = bootstrap.Modal.getInstance(modal);
+    bootstrapModal.hide();
+  }
+}
+
+/**
+ * Simulates sending the "//cleansettings terminal" command to the terminal,
+ * which is intended to clear all terminal settings.
+ */
+function cleanTerminalSettings() {
+  if (sureToProceed("Are you sure you want to clear terminal settings?")) {
+    bitrekTerm.simulateWrite("//cleansettings terminal");
   }
 
   const modal = document.getElementById("settingsModal");

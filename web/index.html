@@ -320,23 +320,98 @@
 							<label for="cursorBlink"> Cursor Blink </label>
 						</div>
 						<div class="form-text">Defines if the cursor should blink</div>
+
+						<!-- Time Format -->
+						<div class="form-floating mt-2">
+							<input
+								type="text"
+								class="form-control border border-2 terminal_settings"
+								id="timeFormat"
+								aria-label="Time Format"
+								data-key="time_format"
+								placeholder="[%H:%M:%S]"
+								data-default="[%H:%M:%S]"
+							/>
+							<label for="timeFormat"> Time Format </label>
+						</div>
+						<div class="form-text">
+							Defines the time format
+							<b
+								class="copy-link"
+								data-bs-toggle="collapse"
+								data-bs-target="#timeFormatDetails"
+								aria-expanded="false"
+								aria-controls="timeFormatDetails"
+							>
+								List of keys
+							</b>
+						</div>
+
+						<!-- Spoiler for time format placeholders -->
+
+						<div class="collapse" id="timeFormatDetails">
+							<div class="card card-body mt-2">
+								<ul class="mb-0">
+									<li><code>%H</code>: hours in 24-hour format (00-23)</li>
+									<li><code>%I</code>: hours in 12-hour format (01-12)</li>
+									<li><code>%p</code>: AM/PM</li>
+									<li><code>%M</code>: minutes (00-59)</li>
+									<li><code>%S</code>: seconds (00-59)</li>
+									<li><code>%d</code>: day of the month (01-31)</li>
+									<li><code>%m</code>: month (01-12)</li>
+									<li><code>%Y</code>: year (four digits)</li>
+									<li><code>%mmm</code>: milliseconds (000-999)</li>
+									<li><code>%mm</code>: tens of milliseconds (00-99)</li>
+								</ul>
+							</div>
+						</div>
 					</div>
 					<div class="modal-footer">
+						<div class="btn-group me-auto">
+							<button
+								type="button"
+								class="btn btn-danger border border-2 border-danger-subtle dropdown-toggle"
+								data-bs-toggle="dropdown"
+								aria-expanded="false"
+							>
+								<i class="bi bi-trash3-fill"></i>
+								<span class="d-none d-sm-inline">Clean</span>
+							</button>
+							<ul class="dropdown-menu">
+								<li>
+									<button
+										class="dropdown-item"
+										onclick="cleanTerminalSettings()"
+									>
+										Clean Terminal
+									</button>
+								</li>
+								<li>
+									<button class="dropdown-item" onclick="cleanUARTSettings()">
+										Clean UART
+									</button>
+								</li>
+								<li>
+									<hr class="dropdown-divider" />
+								</li>
+								<li>
+									<button
+										class="dropdown-item text-danger"
+										onclick="cleanBothSettings()"
+									>
+										Clean Both
+									</button>
+								</li>
+							</ul>
+						</div>
+
 						<button
 							type="button"
-							class="btn btn-danger border border-2 border-danger-subtle me-auto"
-							onclick="cleanBothSettings()"
-						>
-							<i class="bi bi-trash3-fill"></i>
-							<span class="d-none d-sm-inline"> Clean </span>
-						</button>
-						<button
-							type="button"
-							class="btn btn-secondary border border-2 border-secondary-subtle"
+							class="btn btn-secondary border border-2 border-secondary-subtle d-none d-sm-inline"
 							data-bs-dismiss="modal"
 						>
 							<i class="bi bi-x-lg"></i>
-							<span class="d-none d-sm-inline"> Close </span>
+							<span class="d-none d-md-inline"> Close </span>
 						</button>
 						<button
 							type="button"
@@ -344,7 +419,7 @@
 							onclick="saveSettings()"
 						>
 							<i class="bi bi-floppy2-fill"></i>
-							<span class="d-none d-sm-inline"> Save </span>
+							<span> Save </span>
 						</button>
 					</div>
 				</div>

@@ -1,12 +1,11 @@
 "use strict";
 
-// TODO: add time format; showCopyButton; showWelcomeMessage to settings;
+// TODO: add showCopyButton; showWelcomeMessage to settings;
 class TermManager {
   /**
    * Constructor for the TermManager class.
    *
    * @param {string} containerId The id of the container element to render the terminal in.
-   * @param {string} [timeFormat="<span class='text-muted'>[%H:%M:%S]</span>"] The format string for the timestamp.
    * @param {object} [prompts] An object with the following properties:
    * - user: The prompt string for user commands.
    * - root: The prompt string for root commands.
@@ -19,7 +18,6 @@ class TermManager {
    */
   constructor(
     containerId,
-    timeFormat = "<span class='text-muted'>[%H:%M:%S]</span>",
     prompts = {
       user: "&gt; ",
       root: "# ",
@@ -37,6 +35,7 @@ class TermManager {
       cursor_blink: true,
       tx_end_of_line: "lf",
       autosave_uart_settings: true,
+      time_format: "[%H:%M:%S]",
     };
     this.uartSettings = {
       baud_rate: "115200",
@@ -46,17 +45,24 @@ class TermManager {
       buffer_size: "1024",
       flow_control: "none",
     };
+
+    this.settingsDefaults = { ...this.settings };
+    this.uartSettingsDefaults = { ...this.uartSettings };
+
     this.settings = this.loadTerminalSettingsLocalStorage();
     this.uartSettings = this.loadUARTSettingsLocalStorage();
+
     this.txEOL = "\n";
+
     this.term = new XTerminal();
+
     this.containerId = containerId;
     this.containerEl = document.getElementById(containerId);
     this.term.mount(this.containerEl);
     this.terminalWrapper = this.terminalWrapper.bind(this);
     this.term.onInput = (data) => this.terminalWrapper(data);
     this.term.focus();
-    this.timeFormat = timeFormat;
+
     this.prompts = prompts;
     this.welcomeMessage = welcomeMessage;
 
@@ -81,13 +87,33 @@ class TermManager {
       this._registerCopyButton();
     }
 
-    this.timeUnderUpdate = false;
-    if (this.timeFormat.length > 0) {
-      this.timeUnderUpdate = true;
-      setInterval(() => this._updateTime(), 1000);
-    }
+    this._registerCopyLink();
 
+    this.timerInterval = false;
+    this._updateTimeFormat(this.settings.time_format ?? "[%H:%M:%S]");
     this.doPerformSettings();
+  }
+
+  /**
+   * Updates the time format for all elements with the class `update-time-auto`.
+   * If the format string is empty, it will clear the timer and stop updating the time.
+   * @param {string} [format=this.settings.time_format] The time format string.
+   * @private
+   */
+  _updateTimeFormat(format = this.settings.time_format) {
+    const timeFormatEl = document.querySelectorAll("#timeFormat");
+    if (timeFormatEl) {
+      timeFormatEl.value = format;
+    }
+    this.timeFormat = `<span class='text-muted'>${format}</span>`;
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+    }
+    this.timeUnderUpdate = false;
+    if (format.length > 0) {
+      this.timeUnderUpdate = true;
+      this.timerInterval = setInterval(() => this._updateTime(), 1000);
+    }
   }
 
   /**
@@ -363,14 +389,14 @@ class TermManager {
     );
     this.echo(
       this.prompts.system,
-      "<span class='term-command text-link' data-command='//cleansettings'>//cleansettings</span> [both|uart|terminal] - Remove UART and/or terminal settings from the localStorage",
+      "<span class='term-command text-link' data-command='//cleansettings terminal'>//cleansettings terminal</span> [both|uart|terminal] - Remove UART and/or terminal settings from the localStorage",
       true,
       false,
       true
     );
     this.echo(
       this.prompts.system,
-      "<span class='term-command text-link' data-command='//set blink_cursor=true'>//set blink_cursor=false</span> Set settings param to value. In this case will set blink_cursor to false. Mulltiple settings can be set at the same time using a space as separator",
+      "<span class='term-command text-link' data-command='//set blink_cursor=false;'>//set blink_cursor=false;</span> Set settings param to value. In this case will set blink_cursor to false. Mulltiple settings can be set at the same time. Each param must be ended with a semicolon (;)",
       true,
       false,
       true
@@ -694,20 +720,26 @@ class TermManager {
             if (params.length == 2) {
               switch (params[1]) {
                 case "terminal":
+                  this.settings = { ...this.settingsDefaults };
                   this.cleanTerminalLocalStorage();
-                  this.terminalWriteLog("Cleared terminal settings.", true);
+                  this.terminalWriteLog("Cleared terminal settings.", false);
+                  this.printCurrentTerminalSettings();
                   break;
                 case "uart":
+                  this.uartSettings = { ...this.defaultUARTSettings };
                   this.cleanUARTSettingsLocalStorage();
                   this.terminalWriteLog("Cleared UART settings.", true);
                   break;
                 case "both":
+                  this.settings = { ...this.settingsDefaults };
+                  this.uartSettings = { ...this.defaultUARTSettings };
                   this.cleanTerminalLocalStorage();
                   this.cleanUARTSettingsLocalStorage();
                   this.terminalWriteLog(
                     "Cleared terminal and UART settings.",
                     true
                   );
+                  this.printCurrentTerminalSettings();
                   break;
                 default:
                   this.terminalWriteWarn(
@@ -773,7 +805,7 @@ class TermManager {
               );
               this.ask();
             } else {
-              // 1. Process each parameter in the format x=y;z=v;
+              // 1. Parse
               const settingsUpdates = {};
               params.forEach((param) => {
                 const pairs = param.split(";");
@@ -786,7 +818,7 @@ class TermManager {
                 });
               });
 
-              // 2. Update this.settings with the new values
+              // 2. Performs
               Object.keys(settingsUpdates).forEach((key) => {
                 if (this.settings.hasOwnProperty(key)) {
                   if (settingsUpdates[key] === "true") {
@@ -797,25 +829,14 @@ class TermManager {
                   this.settings[key] = settingsUpdates[key];
                 }
               });
-
-              // 3. Log the updated settings
-              const readableUpdated = JSON.stringify(this.settings, null, 2);
-              const lines = readableUpdated.split("\n");
-              const linesCount = lines.length;
-
-              lines.forEach((line, index) => {
-                const hideCopyButton = index > 0 && index < linesCount - 1;
-                this.terminalWriteLog(line, false, !hideCopyButton);
-              });
-
-              this.ask();
-
-              // 4. Save and Perform settings
               this.saveTerminalSettingsLocalStorage(this.settings);
               this.doPerformSettings();
+
+              this.terminalWriteLog("Terminal settings updated.", false);
+
+              this.printCurrentTerminalSettings();
             }
             break;
-
           default: // Plain text or passthrough commands
             if (this.areConnected) {
               if (data.length > 0) {
@@ -948,14 +969,37 @@ class TermManager {
    * Resets all terminal settings UI elements to their default values.
    */
   cleanTerminalLocalStorage() {
-    localStorage.removeItem("bitrek_terminal_settings");
-    document.querySelectorAll(".uart_settings").forEach((el) => {
-      this._resetElementToDefault(el, false);
-    });
     document.querySelectorAll(".terminal_settings").forEach((el) => {
       this._resetElementToDefault(el, false);
     });
     this.doPerformSettings();
+  }
+
+  /**
+   * Prints the current terminal settings to the terminal log.
+   *
+   * @param {string} [prefix] The prefix string to prepend to the output.
+   *   Defaults to "Current terminal settings: ".
+   */
+  printCurrentTerminalSettings() {
+    this.emptyLine();
+    const jsonString = JSON.stringify(this.settings, null, 2);
+    let copysettings = JSON.stringify(this.settings);
+    copysettings = Object.entries(this.settings)
+      .map(([key, value]) => `${key}=${value}`)
+      .join("; ");
+    copysettings = "//set " + copysettings + ";";
+    this.terminalWriteLog(
+      `<b class='copy-link' data-clipboard-text='${copysettings}'>Current</b> terminal settings: `,
+      false
+    );
+    const lines = jsonString.split("\n");
+    lines.forEach((line, index) => {
+      this.terminalWriteLog(line, false);
+      if (index === lines.length - 1) {
+        this.ask();
+      }
+    });
   }
 
   /**
@@ -1196,6 +1240,24 @@ class TermManager {
   }
 
   /**
+   * Registers an event listener on the terminal container to catch clicks on
+   * elements with the class `copy-link`. When such an element is clicked,
+   * the `data-clipboard-text` attribute of the element is used to copy the text
+   * to the clipboard.
+   *
+   * @private
+   */
+  _registerCopyLink() {
+    this.containerEl.addEventListener("click", (event) => {
+      const target = event.target;
+      if (target.matches(".copy-link")) {
+        let toCopy = target.getAttribute("data-clipboard-text");
+        this._copyTextToClipboard(toCopy);
+      }
+    });
+  }
+
+  /**
    * Registers an autocomplete completer on the terminal. The completer will
    * complete any of the following commands with the shortest matching prefix
    * when the TAB key is pressed:
@@ -1291,6 +1353,9 @@ class TermManager {
     } else if (this.settings.tx_end_of_line === "crlf") {
       this.txEOL = "\r\n";
     }
+
+    // Timeformat
+    this._updateTimeFormat(this.settings.time_format);
   }
 
   /**
